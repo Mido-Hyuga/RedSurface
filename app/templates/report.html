@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RedSurface Report — {{ scan.target }}</title>
+    <style>
+        /* ═══════════════════════════════════════════════════
+           RedSurface PDF Report — Print-optimized Stylesheet
+           ═══════════════════════════════════════════════════ */
+
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+        :root {
+            --ink: #1a1a2e;
+            --ink-light: #4a4a6a;
+            --ink-muted: #8888a8;
+            --accent: #e63946;
+            --accent-soft: #fff0f1;
+            --bg: #ffffff;
+            --bg-alt: #f8f9fc;
+            --border: #e2e4ec;
+            --border-light: #f0f1f5;
+            --green: #10b981;
+            --amber: #f59e0b;
+            --blue: #3b82f6;
+            --purple: #8b5cf6;
+            --teal: #14b8a6;
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            color: var(--ink);
+            background: var(--bg);
+            line-height: 1.6;
+            font-size: 11pt;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+
+        @page {
+            size: A4;
+            margin: 18mm 15mm 20mm 15mm;
+        }
+
+        /* ─── Cover / Hero ─── */
+        .report-cover {
+            page-break-after: always;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            min-height: 85vh;
+            padding: 60px 50px;
+            position: relative;
+        }
+
+        .cover-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 60px;
+        }
+
+        .cover-brand svg {
+            width: 40px;
+            height: 40px;
+        }
+
+        .cover-brand-text {
+            font-size: 18pt;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            color: var(--accent);
+        }
+
+        .cover-brand-version {
+            font-size: 9pt;
+            font-weight: 600;
+            background: var(--accent);
+            color: #fff;
+            padding: 2px 8px;
+            border-radius: 4px;
+            margin-left: 6px;
+        }
+
+        .cover-title {
+            font-size: 32pt;
+            font-weight: 800;
+            color: var(--ink);
+            letter-spacing: -1px;
+            line-height: 1.15;
+            margin-bottom: 12px;
+        }
+
+        .cover-subtitle {
+            font-size: 14pt;
+            color: var(--ink-light);
+            font-weight: 400;
+            margin-bottom: 50px;
+        }
+
+        .cover-meta {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px 40px;
+            border-top: 3px solid var(--accent);
+            padding-top: 30px;
+            max-width: 500px;
+        }
+
+        .cover-meta-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .cover-meta-label {
+            font-size: 8pt;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+            color: var(--ink-muted);
+            margin-bottom: 4px;
+        }
+
+        .cover-meta-value {
+            font-size: 11pt;
+            font-weight: 600;
+            color: var(--ink);
+            font-family: 'Courier New', monospace;
+        }
+
+        .cover-footer {
+            position: absolute;
+            bottom: 40px;
+            left: 50px;
+            right: 50px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 15px;
+            border-top: 1px solid var(--border);
+        }
+
+        .cover-footer-text {
+            font-size: 8pt;
+            color: var(--ink-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+        }
+
+        /* ─── Section Headers ─── */
+        .section {
+            margin-bottom: 30px;
+            page-break-inside: avoid;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--ink);
+        }
+
+        .section-number {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 30px;
+            height: 30px;
+            background: var(--accent);
+            color: #fff;
+            font-size: 12pt;
+            font-weight: 700;
+            border-radius: 6px;
+            flex-shrink: 0;
+        }
+
+        .section-title {
+            font-size: 16pt;
+            font-weight: 700;
+            color: var(--ink);
+            letter-spacing: -0.3px;
+        }
+
+        .section-count {
+            font-size: 10pt;
+            color: var(--ink-muted);
+            font-weight: 400;
+        }
+
+        /* ─── Executive Summary ─── */
+        .exec-summary {
+            page-break-after: always;
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 14px;
+            margin-bottom: 30px;
+        }
+
+        .summary-card {
+            text-align: center;
+            padding: 18px 10px;
+            border-radius: 10px;
+            border: 1.5px solid var(--border);
+            background: var(--bg-alt);
+        }
+
+        .summary-card-value {
+            font-size: 26pt;
+            font-weight: 800;
+            line-height: 1.1;
+        }
+
+        .summary-card-label {
+            font-size: 8pt;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--ink-muted);
+            margin-top: 6px;
+        }
+
+        .summary-card.subdomain .summary-card-value { color: var(--blue); }
+        .summary-card.ip .summary-card-value { color: var(--teal); }
+        .summary-card.technology .summary-card-value { color: var(--purple); }
+        .summary-card.email .summary-card-value { color: var(--amber); }
+        .summary-card.error .summary-card-value { color: var(--accent); }
+        .summary-card.total .summary-card-value { color: var(--green); }
+
+        /* Module breakdown table */
+        .module-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        .module-table th {
+            text-align: left;
+            font-size: 8pt;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--ink-muted);
+            padding: 8px 12px;
+            border-bottom: 2px solid var(--ink);
+        }
+
+        .module-table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid var(--border-light);
+            font-size: 10pt;
+        }
+
+        .module-table tr:last-child td { border-bottom: 2px solid var(--border); }
+
+        .module-name { font-weight: 600; }
+        .module-count {
+            font-weight: 700;
+            font-family: 'Courier New', monospace;
+            font-size: 11pt;
+        }
+
+        .bar-cell { width: 40%; }
+
+        .mini-bar {
+            height: 8px;
+            background: var(--border-light);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .mini-bar-fill {
+            height: 100%;
+            border-radius: 4px;
+            background: linear-gradient(90deg, var(--accent), #ff6b7a);
+        }
+
+        /* ─── Findings Tables ─── */
+        .findings-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 10px;
+            font-size: 9.5pt;
+        }
+
+        .findings-table thead th {
+            text-align: left;
+            font-size: 7.5pt;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--ink-muted);
+            padding: 8px 10px;
+            border-bottom: 2px solid var(--ink);
+            background: var(--bg-alt);
+        }
+
+        .findings-table tbody td {
+            padding: 7px 10px;
+            border-bottom: 1px solid var(--border-light);
+            vertical-align: top;
+            word-break: break-word;
+        }
+
+        .findings-table tbody tr:nth-child(even) { background: var(--bg-alt); }
+        .findings-table tbody tr:last-child td { border-bottom: 2px solid var(--border); }
+
+        .finding-value {
+            font-family: 'Courier New', monospace;
+            font-weight: 500;
+            font-size: 9pt;
+            color: var(--ink);
+        }
+
+        .finding-source {
+            display: inline-block;
+            font-size: 7.5pt;
+            font-weight: 600;
+            color: var(--ink-light);
+            background: var(--bg-alt);
+            border: 1px solid var(--border);
+            padding: 1px 7px;
+            border-radius: 3px;
+        }
+
+        .finding-time {
+            font-size: 8pt;
+            color: var(--ink-muted);
+            white-space: nowrap;
+        }
+
+        /* ─── Type Badge ─── */
+        .type-badge {
+            display: inline-block;
+            font-size: 7pt;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            padding: 3px 8px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+
+        .type-badge.subdomain { background: #dbeafe; color: #1e40af; }
+        .type-badge.ip { background: #ccfbf1; color: #0f766e; }
+        .type-badge.technology { background: #ede9fe; color: #6d28d9; }
+        .type-badge.email { background: #fef3c7; color: #92400e; }
+        .type-badge.error { background: #fee2e2; color: #991b1b; }
+        .type-badge.port { background: #cffafe; color: #155e75; }
+        .type-badge.directory { background: #d1fae5; color: #065f46; }
+        .type-badge.vulnerability { background: #fee2e2; color: #991b1b; }
+        .type-badge.person { background: #fce7f3; color: #9d174d; }
+
+        /* ─── Page Footer ─── */
+        .page-footer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 8px 15mm;
+            font-size: 7pt;
+            color: var(--ink-muted);
+            display: flex;
+            justify-content: space-between;
+            border-top: 1px solid var(--border);
+        }
+
+        /* ─── Disclaimer ─── */
+        .disclaimer {
+            margin-top: 40px;
+            padding: 16px 20px;
+            background: var(--accent-soft);
+            border-left: 4px solid var(--accent);
+            border-radius: 0 8px 8px 0;
+            font-size: 8.5pt;
+            color: var(--ink-light);
+            page-break-inside: avoid;
+        }
+
+        .disclaimer strong {
+            color: var(--accent);
+            display: block;
+            margin-bottom: 4px;
+            font-size: 9pt;
+        }
+
+        /* ─── Utility ─── */
+        .page-break { page-break-before: always; }
+        .no-break { page-break-inside: avoid; }
+
+        /* ─── Print Button (hidden on print) ─── */
+        .print-controls {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            display: flex;
+            gap: 10px;
+        }
+
+        .print-btn {
+            padding: 12px 28px;
+            border: none;
+            border-radius: 8px;
+            font-family: 'Inter', sans-serif;
+            font-size: 11pt;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .print-btn-primary {
+            background: var(--accent);
+            color: #fff;
+        }
+
+        .print-btn-primary:hover { background: #c1121f; }
+
+        .print-btn-secondary {
+            background: var(--bg-alt);
+            color: var(--ink);
+            border: 1.5px solid var(--border);
+        }
+
+        .print-btn-secondary:hover { background: var(--border-light); }
+
+        @media print {
+            .print-controls { display: none !important; }
+            .report-cover { min-height: 90vh; }
+        }
+
+        /* ─── Screen preview styling ─── */
+        @media screen {
+            body {
+                background: #e8e8e8;
+            }
+            .report-page {
+                max-width: 210mm;
+                margin: 30px auto;
+                background: #fff;
+                box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+                padding: 50px;
+                border-radius: 4px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Print / Back Controls (hidden on print) -->
+<div class="print-controls">
+    <button class="print-btn print-btn-secondary" onclick="window.close()">← Back</button>
+    <button class="print-btn print-btn-primary" onclick="window.print()">Save as PDF</button>
+</div>
+
+<div class="report-page">
+
+    <!-- ═══════════════════════════
+         COVER PAGE
+         ═══════════════════════════ -->
+    <div class="report-cover">
+        <div class="cover-brand">
+            <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect width="40" height="40" rx="8" fill="#e63946"/>
+                <path d="M12 28L20 12L28 28H23.5L20 21L16.5 28H12Z" fill="white"/>
+                <circle cx="20" cy="16" r="3" fill="white"/>
+            </svg>
+            <span class="cover-brand-text">RedSurface</span>
+            <span class="cover-brand-version">v2.0</span>
+        </div>
+
+        <h1 class="cover-title">Attack Surface<br>Intelligence Report</h1>
+        <p class="cover-subtitle">External reconnaissance findings for <strong>{{ scan.target }}</strong></p>
+
+        <div class="cover-meta">
+            <div class="cover-meta-item">
+                <span class="cover-meta-label">Target Domain</span>
+                <span class="cover-meta-value">{{ scan.target }}</span>
+            </div>
+            <div class="cover-meta-item">
+                <span class="cover-meta-label">Scan Name</span>
+                <span class="cover-meta-value">{{ scan.name }}</span>
+            </div>
+            <div class="cover-meta-item">
+                <span class="cover-meta-label">Scan Mode</span>
+                <span class="cover-meta-value">{{ scan.mode | upper }}</span>
+            </div>
+            <div class="cover-meta-item">
+                <span class="cover-meta-label">Status</span>
+                <span class="cover-meta-value">{{ scan.status | upper }}</span>
+            </div>
+            <div class="cover-meta-item">
+                <span class="cover-meta-label">Date</span>
+                <span class="cover-meta-value">{{ scan.created_at[:10] if scan.created_at else 'N/A' }}</span>
+            </div>
+            <div class="cover-meta-item">
+                <span class="cover-meta-label">Duration</span>
+                <span class="cover-meta-value">{% if scan.duration_seconds %}{{ "%.1f" | format(scan.duration_seconds) }}s{% else %}N/A{% endif %}</span>
+            </div>
+            <div class="cover-meta-item">
+                <span class="cover-meta-label">Total Findings</span>
+                <span class="cover-meta-value">{{ total_results }}</span>
+            </div>
+            <div class="cover-meta-item">
+                <span class="cover-meta-label">Modules Executed</span>
+                <span class="cover-meta-value">{{ module_stats | length }}</span>
+            </div>
+        </div>
+
+        <div class="cover-footer">
+            <span class="cover-footer-text">Confidential — Authorized Personnel Only</span>
+            <span class="cover-footer-text">Generated by RedSurface v2.0</span>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════
+         EXECUTIVE SUMMARY
+         ═══════════════════════════ -->
+    <div class="exec-summary">
+        <div class="section">
+            <div class="section-header">
+                <span class="section-number">1</span>
+                <span class="section-title">Executive Summary</span>
+            </div>
+
+            <p style="margin-bottom: 20px; color: var(--ink-light); font-size: 10pt;">
+                This report summarizes the external attack surface analysis conducted against
+                <strong style="color: var(--ink);">{{ scan.target }}</strong>.
+                A total of <strong style="color: var(--ink);">{{ total_results }} findings</strong> were identified
+                across <strong style="color: var(--ink);">{{ module_stats | length }} reconnaissance modules</strong>.
+            </p>
+
+            <div class="summary-grid">
+                {% for rtype, items in results.items() %}
+                <div class="summary-card {{ rtype }}">
+                    <div class="summary-card-value">{{ items | length }}</div>
+                    <div class="summary-card-label">{{ rtype | replace('_', ' ') | title }}{% if rtype != 'error' %}s{% endif %}</div>
+                </div>
+                {% endfor %}
+                <div class="summary-card total">
+                    <div class="summary-card-value">{{ total_results }}</div>
+                    <div class="summary-card-label">Total Findings</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Module Breakdown -->
+        {% if module_stats %}
+        <div class="section">
+            <div class="section-header">
+                <span class="section-number">2</span>
+                <span class="section-title">Module Performance</span>
+            </div>
+
+            <table class="module-table">
+                <thead>
+                    <tr>
+                        <th style="width: 45%;">Module</th>
+                        <th class="bar-cell">Coverage</th>
+                        <th style="width: 15%; text-align: right;">Findings</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for mod, count in module_stats.items() %}
+                    <tr>
+                        <td class="module-name">{{ mod }}</td>
+                        <td>
+                            <div class="mini-bar">
+                                <div class="mini-bar-fill" style="width: {{ (count / max_module_count * 100) | int }}%"></div>
+                            </div>
+                        </td>
+                        <td class="module-count" style="text-align: right;">{{ count }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- ═══════════════════════════
+         DETAILED FINDINGS
+         ═══════════════════════════ -->
+    {% set section_num = [3] %}
+    {% for rtype, items in results.items() %}
+    <div class="section {% if not loop.first %}page-break{% endif %}">
+        <div class="section-header">
+            <span class="section-number">{{ section_num[0] }}</span>
+            <span class="section-title">{{ rtype | replace('_', ' ') | title }}{% if rtype != 'error' %}s{% endif %}</span>
+            <span class="section-count">{{ items | length }} found</span>
+        </div>
+
+        <span class="type-badge {{ rtype }}">{{ rtype | upper }}</span>
+
+        <table class="findings-table">
+            <thead>
+                <tr>
+                    <th style="width: 5%;">#</th>
+                    <th style="width: 50%;">Value</th>
+                    <th style="width: 25%;">Source Module</th>
+                    <th style="width: 20%;">Timestamp</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in items %}
+                <tr class="no-break">
+                    <td style="color: var(--ink-muted); font-size: 8pt;">{{ loop.index }}</td>
+                    <td class="finding-value">{{ item.value }}</td>
+                    <td><span class="finding-source">{{ item.module_name }}</span></td>
+                    <td class="finding-time">{{ item.created_at[:16] if item.created_at else '—' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% if section_num.append(section_num.pop() + 1) %}{% endif %}
+    {% endfor %}
+
+    <!-- ═══════════════════════════
+         DISCLAIMER
+         ═══════════════════════════ -->
+    <div class="disclaimer">
+        <strong>⚠ Disclaimer</strong>
+        This report was generated by RedSurface v2.0 and is intended for authorized security testing and research purposes only.
+        The findings presented are based on publicly accessible data sources and passive reconnaissance techniques.
+        Always obtain proper written authorization before acting on any information in this report.
+        Unauthorized use of this information may violate applicable laws.
+    </div>
+
+</div><!-- /report-page -->
+</body>
+</html>

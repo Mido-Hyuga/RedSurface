@@ -15,6 +15,30 @@ import dns.asyncresolver
 import httpx
 
 from utils.logger import get_logger
+from utils.cache import FileCache
+
+# ... imports ...
+
+class InfrastructureDiscoverer:
+    # ... class ... 
+
+    def __init__(
+        self,
+        wordlist: Optional[List[str]] = None,
+        timeout: float = 5.0,
+        max_concurrent: int = 30,
+        dns_servers: Optional[List[str]] = None,
+        use_crtsh: bool = True,
+        analyze_ssl: bool = True,
+        use_system_dns: bool = False,
+    ) -> None:
+        # ... existing init ...
+        self.securitytrails_key = None
+        self.censys_id = None
+        self.censys_secret = None
+        
+        # Initialize cache
+        self.cache = FileCache(ttl=86400) # 24 hour cache
 
 
 # Cloud provider signature patterns (CNAME -> Provider mapping)
@@ -234,6 +258,16 @@ class InfrastructureDiscoverer:
         self.analyze_ssl = analyze_ssl
         self.logger = get_logger()
         self._resolver: Optional[dns.asyncresolver.Resolver] = None
+        
+        self.securitytrails_key = None
+        self.censys_id = None
+        self.censys_secret = None
+
+    def set_api_keys(self, securitytrails_key: str = None, censys_id: str = None, censys_secret: str = None):
+        """Set optional API keys for enhanced discovery."""
+        self.securitytrails_key = securitytrails_key
+        self.censys_id = censys_id
+        self.censys_secret = censys_secret
 
     def _get_resolver(self) -> dns.asyncresolver.Resolver:
         """Get or create the async DNS resolver."""
@@ -498,6 +532,135 @@ class InfrastructureDiscoverer:
         
         return subdomains
 
+    async def discover_subdomains_securitytrails(self, domain: str) -> Set[str]:
+        """
+        Discover subdomains using SecurityTrails API.
+        
+        Args:
+            domain: Target domain
+            
+        Returns:
+            Set of discovered subdomains
+        """
+        subdomains = set()
+        if not self.securitytrails_key:
+            return subdomains
+            
+        # Check cache first
+        cache_key = f"securitytrails_{domain}"
+        cached = self.cache.get(cache_key)
+        if cached:
+            self.logger.info(f"SecurityTrails: Loaded {len(cached)} subdomains from cache")
+            return set(cached)
+            
+        self.logger.debug(f"Querying SecurityTrails for {domain}...")
+        
+        headers = {
+            "APIKEY": self.securitytrails_key,
+            "Accept": "application/json"
+        }
+        
+        url = f"https://api.securitytrails.com/v1/domain/{domain}/subdomains"
+        
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.get(url, headers=headers)
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    for sub in data.get("subdomains", []):
+                        full_domain = f"{sub}.{domain}"
+                        subdomains.add(full_domain)
+                elif response.status_code == 429:
+                    self.logger.warning("SecurityTrails rate limit exceeded")
+                elif response.status_code == 403:
+                     self.logger.warning("SecurityTrails API key invalid or quota exceeded")
+                else:
+                    self.logger.debug(f"SecurityTrails returned status {response.status_code}")
+                    
+        except Exception as e:
+            self.logger.debug(f"SecurityTrails error: {e}")
+            
+        if subdomains:
+            self.cache.set(cache_key, list(subdomains))
+            
+        return subdomains
+
+    async def discover_subdomains_censys(self, domain: str) -> Set[str]:
+        """
+        Discover subdomains using Censys Search API.
+        
+        Args:
+            domain: Target domain
+            
+        Returns:
+            Set of discovered subdomains
+        """
+        subdomains = set()
+        if not self.censys_id or not self.censys_secret:
+            return subdomains
+            
+        # Check cache first
+        cache_key = f"censys_{domain}"
+        cached = self.cache.get(cache_key)
+        if cached:
+            self.logger.info(f"Censys: Loaded {len(cached)} subdomains from cache")
+            return set(cached)
+            
+        self.logger.debug(f"Querying Censys for {domain}...")
+        
+        auth = (self.censys_id, self.censys_secret)
+        url = "https://search.censys.io/api/v2/hosts/search"
+        
+        # Search for certificates matching the domain
+        query = f"names: {domain}"
+        
+        params = {
+            "q": query,
+            "per_page": 100,
+            "virtual_hosts": "EXCLUDE"
+        }
+        
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                # Iterate through a few pages (limit to avoid excessive usage)
+                cursor = None
+                for _ in range(3):  # Max 3 pages
+                    if cursor:
+                        params["cursor"] = cursor
+                        
+                    response = await client.get(url, auth=auth, params=params)
+                    
+                    if response.status_code == 200:
+                        data = response.json()
+                        hits = data.get("result", {}).get("hits", [])
+                        
+                        if not hits:
+                            break
+                            
+                        for hit in hits:
+                            # Extract names from the hit
+                            names = hit.get("names", [])
+                            for name in names:
+                                name = name.lower()
+                                if name.endswith(f".{domain}") and name != domain:
+                                    subdomains.add(name)
+                        
+                        cursor = data.get("result", {}).get("links", {}).get("next")
+                        if not cursor:
+                            break
+                    else:
+                        self.logger.debug(f"Censys returned status {response.status_code}")
+                        break
+                        
+        except Exception as e:
+            self.logger.debug(f"Censys error: {e}")
+        
+        if subdomains:
+            self.cache.set(cache_key, list(subdomains))
+            
+        return subdomains
+
     def get_ssl_cert_info(self, hostname: str, port: int = 443) -> Optional[SSLCertInfo]:
         """
         Retrieve and analyze SSL/TLS certificate information.
@@ -687,11 +850,34 @@ class InfrastructureDiscoverer:
         discovered_assets: List[DiscoveredAsset] = []
         all_subdomains: Set[str] = set()
 
-        # Phase 1: crt.sh subdomain discovery (passive)
+        # Phase 1: Passive Subdomain Enumeration
+        
+        # 1.1 crt.sh
         if self.use_crtsh:
-            crtsh_subdomains = await self.discover_subdomains_crtsh(target_domain)
-            all_subdomains.update(crtsh_subdomains)
-            self.logger.debug(f"crt.sh found {len(crtsh_subdomains)} subdomains")
+            try:
+                crtsh_subdomains = await self.discover_subdomains_crtsh(target_domain)
+                all_subdomains.update(crtsh_subdomains)
+                self.logger.info(f"crt.sh found {len(crtsh_subdomains)} subdomains")
+            except Exception as e:
+                self.logger.error(f"crt.sh discovery failed: {e}")
+
+        # 1.2 SecurityTrails
+        if self.securitytrails_key:
+            try:
+                st_subdomains = await self.discover_subdomains_securitytrails(target_domain)
+                all_subdomains.update(st_subdomains)
+                self.logger.info(f"SecurityTrails found {len(st_subdomains)} subdomains")
+            except Exception as e:
+                self.logger.error(f"SecurityTrails discovery failed: {e}")
+        
+        # 1.3 Censys
+        if self.censys_id and self.censys_secret:
+            try:
+                censys_subdomains = await self.discover_subdomains_censys(target_domain)
+                all_subdomains.update(censys_subdomains)
+                self.logger.info(f"Censys found {len(censys_subdomains)} subdomains")
+            except Exception as e:
+                 self.logger.error(f"Censys discovery failed: {e}")
 
         # Phase 2: Add wordlist subdomains
         for sub in self.wordlist:

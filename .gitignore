@@ -36,6 +36,8 @@ env/
 output/
 results/
 *.log
+_legacy/
+data/*.db
 
 # OS
 .DS_Store

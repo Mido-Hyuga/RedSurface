@@ -1,0 +1,206 @@
+{% extends "base.html" %}
+{% block title %}Scan #{{ scan.id }} — {{ scan.target }}{% endblock %}
+{% block breadcrumb %}<a href="/">Dashboard</a> / Scan #{{ scan.id }}{% endblock %}
+
+{% block extra_head %}
+<script src="https://d3js.org/d3.v7.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="scan-results-page">
+    <!-- Scan Header -->
+    <div class="scan-header">
+        <div class="scan-meta">
+            <h1>{{ scan.name }}</h1>
+            <div class="scan-meta-row">
+                <span class="mono">{{ scan.target }}</span>
+                <span class="status-badge status-{{ scan.status }}">{{ scan.status }}</span>
+                <span class="meta-item">{{ total_results }} results</span>
+                {% if scan.duration_seconds %}
+                <span class="meta-item">{{ "%.1f" | format(scan.duration_seconds) }}s</span>
+                {% endif %}
+                <span class="meta-item">{{ scan.mode }} mode</span>
+            </div>
+        </div>
+        <div class="scan-actions">
+            {% if scan.status == 'running' %}
+            <button class="btn-danger" onclick="cancelScan({{ scan.id }})">Cancel</button>
+            {% endif %}
+            <button class="btn-secondary btn-export" onclick="exportResults('json')">⬇ JSON</button>
+            <button class="btn-secondary btn-export" onclick="exportResults('csv')">⬇ CSV</button>
+            <button class="btn-secondary btn-export" onclick="exportPDF()">⬇ PDF</button>
+            <button class="btn-danger-outline" onclick="deleteScan({{ scan.id }})">Delete</button>
+        </div>
+    </div>
+
+    <!-- Auto-refresh for running scans -->
+    {% if scan.status == 'running' %}
+    <div class="running-banner">
+        <div class="spinner"></div>
+        <span>Scan in progress… Results update automatically.</span>
+    </div>
+    {% endif %}
+
+    <!-- Stats Cards -->
+    <div class="stats-row stats-grid-results">
+        {% for rtype, items in results.items() if rtype != 'error' %}
+        <div class="stat-card stat-card-mini">
+            <div class="stat-value">{{ items | length }}</div>
+            <div class="stat-label">{{ rtype | replace('_', ' ') | title }}s</div>
+        </div>
+        {% endfor %}
+        {% if module_stats %}
+        <div class="stat-card stat-card-mini stat-card-highlight">
+            <div class="stat-value">{{ module_stats | length }}</div>
+            <div class="stat-label">Modules Ran</div>
+        </div>
+        {% endif %}
+        {% if error_count > 0 %}
+        <div class="stat-card stat-card-mini stat-card-warning">
+            <div class="stat-value">{{ error_count }}</div>
+            <div class="stat-label">Errors</div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Module Breakdown -->
+    {% if module_stats %}
+    <div class="module-breakdown">
+        <h3>Module Breakdown</h3>
+        <div class="module-bar-chart">
+            {% for mod, count in module_stats.items() %}
+            <div class="module-bar-row" title="{{ mod }}: {{ count }} results">
+                <span class="module-bar-label">{{ mod }}</span>
+                <div class="module-bar-track">
+                    <div class="module-bar-fill" style="width: {{ (count / max_module_count * 100) | int }}%"></div>
+                </div>
+                <span class="module-bar-count">{{ count }}</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Attack Surface Graph -->
+    {% if scan.status == 'completed' and total_results > 0 %}
+    <div class="graph-section">
+        <h3>⬡ Attack Surface Graph <span class="count">({{ total_results }} nodes)</span></h3>
+        <div class="graph-container" id="attack-graph"></div>
+    </div>
+    {% endif %}
+
+    <!-- Search + Filter Bar -->
+    <div class="results-toolbar">
+        <input type="text" id="result-search" placeholder="Search results…" oninput="filterResults()">
+        <div class="results-tabs" id="result-tabs">
+            <button class="tab active" onclick="showTab('all', this)">All ({{ total_results }})</button>
+            {% for rtype, items in results.items() %}
+            <button class="tab" onclick="showTab('{{ rtype }}', this)">
+                {{ rtype | replace('_', ' ') | title }} ({{ items | length }})
+            </button>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Results Tables -->
+    <div class="results-container" id="results-all">
+        {% for rtype, items in results.items() %}
+        <div class="result-section" data-type="{{ rtype }}">
+            <h3>{{ rtype | replace('_', ' ') | title }} <span class="count">({{ items | length }})</span></h3>
+            <table class="results-table">
+                <thead>
+                    <tr>
+                        <th>Value</th>
+                        <th>Source</th>
+                        <th>Time</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in items %}
+                    <tr class="result-row" data-value="{{ item.value | lower }}">
+                        <td class="mono result-value">{{ item.value }}</td>
+                        <td><span class="module-tag">{{ item.module_name }}</span></td>
+                        <td class="result-time">{{ item.created_at[:16] if item.created_at else "—" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endfor %}
+
+        {% if not results %}
+        <div class="empty-state">
+            <p>No results yet. {% if scan.status == 'running' %}Scan is still running…{% else %}This scan produced no
+                findings.{% endif %}</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="/static/js/graph.js"></script>
+<script>
+    function showTab(type, btn) {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        if (btn) btn.classList.add('active');
+
+        document.querySelectorAll('.result-section').forEach(s => {
+            s.style.display = (type === 'all' || s.dataset.type === type) ? 'block' : 'none';
+        });
+    }
+
+    function filterResults() {
+        const q = document.getElementById('result-search').value.toLowerCase();
+        document.querySelectorAll('.result-row').forEach(row => {
+            const val = row.dataset.value || '';
+            row.style.display = val.includes(q) ? '' : 'none';
+        });
+    }
+
+    async function exportResults(format) {
+        try {
+            const resp = await fetch('/api/scans/{{ scan.id }}/export?format=' + format);
+            if (!resp.ok) throw new Error('Export failed');
+            const blob = await resp.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'redsurface_{{ scan.target }}_{{ scan.id }}.' + format;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(url);
+        } catch (e) {
+            alert('Export failed: ' + e.message);
+        }
+    }
+
+    function exportPDF() {
+        window.open('/scan/{{ scan.id }}/report', '_blank');
+    }
+
+    {% if scan.status == 'running' %}
+    setTimeout(() => location.reload(), 5000);
+    {% endif %}
+
+    async function deleteScan(id) {
+        if (!confirm('Delete this scan and all its results?')) return;
+        await fetch('/api/scans/' + id, { method: 'DELETE' });
+        window.location.href = '/';
+    }
+
+    async function cancelScan(id) {
+        await fetch('/api/scans/' + id + '/cancel', { method: 'POST' });
+        location.reload();
+    }
+
+    // Initialize the attack surface graph
+    {% if scan.status == 'completed' and total_results > 0 %}
+    document.addEventListener('DOMContentLoaded', function () {
+        initAttackGraph('attack-graph', {{ scan.id }});
+    });
+    {% endif %}
+</script>
+{% endblock %}

@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}RedSurface{% endblock %} — Attack Surface Intelligence</title>
+    <meta name="description" content="RedSurface — Open-Source Attack Surface Intelligence Platform">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/main.css">
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    <nav class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="logo">
+                <span class="logo-icon">◈</span>
+                <span class="logo-text">RedSurface</span>
+            </div>
+            <span class="version-badge">v2.0</span>
+        </div>
+        <ul class="nav-links">
+            <li><a href="/" class="nav-link {% if request.url.path == '/' %}active{% endif %}">
+                <span class="nav-icon">⊞</span> Dashboard
+            </a></li>
+            <li><a href="/scan/new" class="nav-link {% if request.url.path == '/scan/new' %}active{% endif %}">
+                <span class="nav-icon">⊕</span> New Scan
+            </a></li>
+            <li><a href="/modules" class="nav-link {% if request.url.path == '/modules' %}active{% endif %}">
+                <span class="nav-icon">⧉</span> Modules
+            </a></li>
+            <li><a href="/settings" class="nav-link {% if request.url.path == '/settings' %}active{% endif %}">
+                <span class="nav-icon">⚙</span> Settings
+            </a></li>
+        </ul>
+        <div class="sidebar-footer">
+            <span class="edition-badge">Community Edition</span>
+        </div>
+    </nav>
+
+    <main class="main-content">
+        <header class="top-bar">
+            <div class="breadcrumb">{% block breadcrumb %}Home{% endblock %}</div>
+        </header>
+        <div class="page-content">
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+
+    <script src="/static/js/app.js"></script>
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>

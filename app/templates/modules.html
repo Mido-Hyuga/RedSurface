@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}Modules{% endblock %}
+{% block breadcrumb %}<a href="/">Dashboard</a> / Modules{% endblock %}
+
+{% block content %}
+<div class="modules-page">
+    <h1>Available Modules <span class="count">({{ modules | length }})</span></h1>
+
+    <!-- Filter Bar -->
+    <div class="filter-bar">
+        <input type="text" id="module-search" placeholder="Search modules..." oninput="filterModules()">
+        <select id="category-filter" onchange="filterModules()">
+            <option value="">All Categories</option>
+            <option value="Discovery">Discovery</option>
+            <option value="OSINT">OSINT</option>
+            <option value="Threat Intelligence">Threat Intelligence</option>
+            <option value="Internal">Internal</option>
+        </select>
+        <select id="type-filter" onchange="filterModules()">
+            <option value="">All Types</option>
+            <option value="Free API">Free API</option>
+            <option value="Tiered API">Tiered API</option>
+            <option value="Internal">Internal</option>
+        </select>
+    </div>
+
+    <div class="modules-grid" id="modules-grid">
+        {% for mod in modules %}
+        <div class="module-detail-card" data-name="{{ mod.name | lower }}" data-category="{{ mod.category }}"
+            data-type="{{ mod.api_type }}">
+            <div class="module-header">
+                <h3>{{ mod.name }}</h3>
+                <span class="module-type-badge type-{{ mod.api_type | lower | replace(' ', '-') }}">{{ mod.api_type
+                    }}</span>
+            </div>
+            <p class="module-desc">{{ mod.description }}</p>
+            <div class="module-footer">
+                <span class="module-category">{{ mod.category }}</span>
+                {% if mod.requires_api_key %}
+                {% if mod.is_ready %}
+                <span class="key-status ready">✓ Key configured</span>
+                {% else %}
+                <span class="key-status missing">⚠ Key required</span>
+                {% endif %}
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    function filterModules() {
+        const search = document.getElementById('module-search').value.toLowerCase();
+        const category = document.getElementById('category-filter').value;
+        const type = document.getElementById('type-filter').value;
+
+        document.querySelectorAll('.module-detail-card').forEach(card => {
+            const name = card.dataset.name;
+            const cat = card.dataset.category;
+            const typ = card.dataset.type;
+
+            const matchSearch = !search || name.includes(search);
+            const matchCat = !category || cat === category;
+            const matchType = !type || typ === type;
+
+            card.style.display = (matchSearch && matchCat && matchType) ? 'flex' : 'none';
+        });
+    }
+</script>
+{% endblock %}

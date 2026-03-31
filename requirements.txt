@@ -1,8 +1,11 @@
 httpx>=0.25.0
 asyncio-throttle>=1.0.2
 networkx>=3.1
-pyvis>=0.3.2
 dnspython>=2.4.0
 aiofiles>=23.2.1
 shodan>=1.28.0
-questionary>=2.0.0flask>=3.0.0
+fastapi>=0.109.0
+uvicorn[standard]>=0.25.0
+sqlalchemy>=2.0.0
+jinja2>=3.1.0
+python-multipart>=0.0.6

@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block title %}New Scan{% endblock %}
+{% block breadcrumb %}<a href="/">Dashboard</a> / New Scan{% endblock %}
+
+{% block content %}
+<div class="scan-config">
+    <h1>Configure New Scan</h1>
+
+    <form id="scan-form" onsubmit="return startScan(event)">
+        <!-- Target & Name -->
+        <div class="form-section">
+            <h3>Target</h3>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="scan-name">Scan Name</label>
+                    <input type="text" id="scan-name" name="name" placeholder="e.g. Q1 Recon - example.com" required>
+                </div>
+                <div class="form-group">
+                    <label for="scan-target">Target Domain</label>
+                    <input type="text" id="scan-target" name="target" placeholder="e.g. example.com" required>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="scan-mode">Scan Mode</label>
+                    <select id="scan-mode" name="mode">
+                        <option value="passive">Passive (OSINT only, no direct contact)</option>
+                        <option value="active">Active (includes port scanning, fingerprinting)</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Module Selection -->
+        <div class="form-section">
+            <h3>Modules</h3>
+            <p class="form-hint">Select modules to run. Leave all unchecked to run all enabled modules.</p>
+
+            {% for category in ['Discovery', 'OSINT', 'Threat Intelligence', 'Internal'] %}
+            <div class="module-category">
+                <h4>{{ category }}</h4>
+                <div class="module-grid">
+                    {% for mod in modules if mod.category == category %}
+                    <label class="module-card" for="mod-{{ mod.name | replace(' ', '-') }}">
+                        <input type="checkbox" name="modules" value="{{ mod.name }}"
+                            id="mod-{{ mod.name | replace(' ', '-') }}" {% if not mod.is_ready and mod.requires_api_key
+                            %}disabled{% endif %}>
+                        <div class="module-info">
+                            <span class="module-name">{{ mod.name }}</span>
+                            <span class="module-type-badge type-{{ mod.api_type | lower | replace(' ', '-') }}">{{
+                                mod.api_type }}</span>
+                            {% if not mod.is_ready and mod.requires_api_key %}
+                            <span class="module-warning">⚠ API key required</span>
+                            {% endif %}
+                        </div>
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn-primary" id="start-btn">
+                <span class="btn-icon">▶</span> Start Scan
+            </button>
+        </div>
+    </form>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    async function startScan(event) {
+        event.preventDefault();
+        const form = document.getElementById('scan-form');
+        const btn = document.getElementById('start-btn');
+        btn.disabled = true;
+        btn.textContent = 'Starting...';
+
+        const checked = [...form.querySelectorAll('input[name="modules"]:checked')];
+        const modules = checked.map(el => el.value);
+
+        const body = {
+            name: form.querySelector('#scan-name').value,
+            target: form.querySelector('#scan-target').value,
+            mode: form.querySelector('#scan-mode').value,
+            modules: modules,
+        };
+
+        try {
+            const res = await fetch('/api/scans', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body),
+            });
+            const data = await res.json();
+            window.location.href = '/scan/' + data.id;
+        } catch (err) {
+            alert('Failed to start scan: ' + err.message);
+            btn.disabled = false;
+            btn.textContent = '▶ Start Scan';
+        }
+        return false;
+    }
+</script>
+{% endblock %}

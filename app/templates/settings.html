@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}Settings{% endblock %}
+{% block breadcrumb %}<a href="/">Dashboard</a> / Settings{% endblock %}
+
+{% block content %}
+<div class="settings-page">
+    <h1>Settings</h1>
+
+    <div class="form-section">
+        <h3>API Keys</h3>
+        <p class="form-hint">Configure API keys for modules that require them. Keys are stored locally in the database.
+        </p>
+
+        <div class="api-keys-list">
+            {% for mod in modules if mod.requires_api_key %}
+            <div class="api-key-row">
+                <div class="api-key-info">
+                    <span class="api-key-name">{{ mod.name }}</span>
+                    <span class="module-type-badge type-{{ mod.api_type | lower | replace(' ', '-') }}">{{ mod.api_type
+                        }}</span>
+                    {% if mod.website %}
+                    <a href="{{ mod.website }}" target="_blank" class="api-link">Get API Key →</a>
+                    {% endif %}
+                </div>
+                <div class="api-key-input">
+                    <input type="password" id="key-{{ mod.name | replace(' ', '-') }}" placeholder="Enter API key..."
+                        value="{% if config_map.get(mod.name, {}).get('has_api_key') %}••••••••{% endif %}">
+                    <button class="btn-sm" onclick="saveKey('{{ mod.name }}')">Save</button>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    async function saveKey(moduleName) {
+        const inputId = 'key-' + moduleName.replace(/ /g, '-');
+        const input = document.getElementById(inputId);
+        const key = input.value;
+
+        if (!key || key === '••••••••') return;
+
+        try {
+            const res = await fetch('/api/settings/modules/' + encodeURIComponent(moduleName) + '/key', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ api_key: key }),
+            });
+            if (res.ok) {
+                input.value = '••••••••';
+                input.type = 'password';
+            } else {
+                alert('Failed to save key');
+            }
+        } catch (err) {
+            alert('Error: ' + err.message);
+        }
+    }
+</script>
+{% endblock %}

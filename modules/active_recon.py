@@ -18,8 +18,6 @@ import dns.exception
 import httpx
 
 from utils.logger import get_logger
-from core.config import ScanConfig, ScanMode
-
 
 # Default directory wordlist for quick enumeration
 DEFAULT_DIRS = [
@@ -95,7 +93,7 @@ class ActiveRecon:
     
     def __init__(
         self,
-        config: Optional[ScanConfig] = None,
+        config: Optional[Dict[str, Any]] = None,
         timeout: float = 10.0,
         max_concurrent: int = 20,
         user_agent: str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
@@ -104,12 +102,12 @@ class ActiveRecon:
         Initialize ActiveRecon module.
         
         Args:
-            config: ScanConfig instance with mode and settings
+            config: Dictionary with settings
             timeout: Request timeout in seconds
             max_concurrent: Maximum concurrent HTTP requests
             user_agent: User-Agent header for HTTP requests
         """
-        self.config = config or ScanConfig()
+        self.config = config or {}
         self.timeout = timeout
         self.max_concurrent = max_concurrent
         self.user_agent = user_agent
@@ -117,29 +115,16 @@ class ActiveRecon:
         self.results = ActiveReconResults()
     
     def _is_active_mode(self) -> bool:
-        """Check if we're in active scanning mode or custom mode with active modules enabled."""
-        if self.config.mode == ScanMode.ACTIVE:
-            return True
-        # In CUSTOM mode, check if active recon modules are enabled
-        if self.config.mode == ScanMode.CUSTOM:
-            return getattr(self.config, 'module_zone_transfer', False) or getattr(self.config, 'module_dir_enum', False)
-        return False
+        """Plugins orchestrate execution now."""
+        return True
     
     def _should_run_zone_transfer(self) -> bool:
-        """Check if zone transfer should run."""
-        if self.config.mode == ScanMode.ACTIVE:
-            return True
-        if self.config.mode == ScanMode.CUSTOM:
-            return getattr(self.config, 'module_zone_transfer', False)
-        return False
+        """Plugins orchestrate execution now."""
+        return True
     
     def _should_run_dir_enum(self) -> bool:
-        """Check if directory enumeration should run."""
-        if self.config.mode == ScanMode.ACTIVE:
-            return True
-        if self.config.mode == ScanMode.CUSTOM:
-            return getattr(self.config, 'module_dir_enum', False)
-        return False
+        """Plugins orchestrate execution now."""
+        return True
     
     def zone_transfer(self, domain: str) -> Set[str]:
         """
@@ -284,11 +269,16 @@ class ActiveRecon:
             wordlist = DEFAULT_DIRS.copy()
         
         # Also try loading from config
-        if self.config.wordlist_dirs and self.config.wordlist_dirs.exists():
-            config_wordlist = self.config.load_directory_wordlist()
-            if config_wordlist:
-                wordlist.extend(config_wordlist)
-                wordlist = list(set(wordlist))  # Deduplicate
+        if self.config.get("wordlist_dirs"):
+            try:
+                path = Path(self.config["wordlist_dirs"])
+                if path.exists():
+                    with open(path, "r", encoding="utf-8") as f:
+                        config_wordlist = [line.strip() for line in f if line.strip()]
+                    wordlist.extend(config_wordlist)
+                    wordlist = list(set(wordlist))  # Deduplicate
+            except Exception as e:
+                self.logger.warning(f"Failed to load custom wordlist: {e}")
         
         found_dirs: List[Dict[str, Any]] = []
         semaphore = asyncio.Semaphore(self.max_concurrent)
@@ -438,7 +428,7 @@ class ActiveRecon:
             self.logger.info(f"Enumerating {len(urls_to_enum)} URLs")
             
             # Run directory enumeration on each URL
-            wordlist_path = str(self.config.wordlist_dirs) if self.config.wordlist_dirs else None
+            wordlist_path = self.config.get("wordlist_dirs")
             
             for url in urls_to_enum:
                 try:

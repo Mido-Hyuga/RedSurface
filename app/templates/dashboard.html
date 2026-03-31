@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block breadcrumb %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="dashboard">
+    <!-- Stats Row -->
+    <div class="stats-row">
+        <div class="stat-card">
+            <div class="stat-value">{{ stats.total_scans }}</div>
+            <div class="stat-label">Total Scans</div>
+        </div>
+        <div class="stat-card stat-running">
+            <div class="stat-value">{{ stats.running }}</div>
+            <div class="stat-label">Running</div>
+        </div>
+        <div class="stat-card stat-completed">
+            <div class="stat-value">{{ stats.completed }}</div>
+            <div class="stat-label">Completed</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">{{ stats.total_results }}</div>
+            <div class="stat-label">Total Results</div>
+        </div>
+    </div>
+
+    <!-- Quick Action -->
+    <div class="section-header">
+        <h2>Quick Actions</h2>
+    </div>
+    <div class="quick-actions">
+        <a href="/scan/new" class="action-card">
+            <span class="action-icon">⊕</span>
+            <span class="action-title">New Scan</span>
+            <span class="action-desc">Start a reconnaissance scan</span>
+        </a>
+        <a href="/modules" class="action-card">
+            <span class="action-icon">⧉</span>
+            <span class="action-title">Modules</span>
+            <span class="action-desc">Browse {{ modules_count | default(0) }} available modules</span>
+        </a>
+        <a href="/settings" class="action-card">
+            <span class="action-icon">⚙</span>
+            <span class="action-title">Settings</span>
+            <span class="action-desc">Configure API keys</span>
+        </a>
+    </div>
+
+    <!-- Recent Scans -->
+    <div class="section-header">
+        <h2>Recent Scans</h2>
+    </div>
+    {% if recent_scans %}
+    <div class="scans-table-wrapper">
+        <table class="scans-table" id="scans-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Target</th>
+                    <th>Status</th>
+                    <th>Results</th>
+                    <th>Duration</th>
+                    <th>Created</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for scan in recent_scans %}
+                <tr>
+                    <td class="mono">#{{ scan.id }}</td>
+                    <td>{{ scan.name }}</td>
+                    <td class="mono">{{ scan.target }}</td>
+                    <td>
+                        <span class="status-badge status-{{ scan.status }}">{{ scan.status }}</span>
+                    </td>
+                    <td>{{ scan.result_count }}</td>
+                    <td>{{ "%.1f" | format(scan.duration_seconds) if scan.duration_seconds else "—" }}s</td>
+                    <td>{{ scan.created_at[:16] if scan.created_at else "—" }}</td>
+                    <td>
+                        <a href="/scan/{{ scan.id }}" class="btn-sm">View</a>
+                        {% if scan.status == 'running' %}
+                        <button class="btn-sm btn-danger" onclick="cancelScan({{ scan.id }})">Cancel</button>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <p>No scans yet. <a href="/scan/new">Start your first scan →</a></p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

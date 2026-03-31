@@ -1,176 +1,116 @@
-# RedSurface
+# RedSurface v2.0 — Web Edition 🔴
 
-**Attack Surface Intelligence Graph Generator**
+**Attack Surface Intelligence Platform**
 
-A modular Python CLI tool for external reconnaissance that discovers assets, fingerprints technologies, maps vulnerabilities, and generates an interactive Attack Surface Graph with comprehensive HTML reports.
+RedSurface is a modular, high-performance external reconnaissance web application. It discovers assets, fingerprints technologies, maps vulnerabilities, and generates a stunning interactive **Attack Surface Graph** directly in your browser.
 
-![Python](https://img.shields.io/badge/Python-3.9+-blue.svg)
+![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.109+-teal.svg)
 ![License](https://img.shields.io/badge/License-MIT-green.svg)
+
+---
 
 ## Features
 
-### 🔍 Reconnaissance
-- **Infrastructure Discovery** - Subdomain enumeration via crt.sh, CertSpotter, HackerTarget
-- **Async DNS Resolution** - Fast A/AAAA record resolution with system DNS support
-- **SSL Certificate Analysis** - Certificate chain inspection and validation
-- **Cloud Detection** - Identifies AWS, Azure, GCP, Cloudflare hosted assets
+### 31 Atomic Plugins
+RedSurface features a highly modular, async plugin engine boasting **31 independently selectable plugins** across four categories:
+*   **Discovery (10):** Subdomain enumeration via crt.sh, RapidDNS, HackerTarget, Shodan InternetDB, SSL Certificate analysis, and more.
+*   **OSINT (10):** Email and employee discovery via PGP keyservers, GitHub commits, Hunter.io, Archive.org, and Phonebook.cz.
+*   **Threat Intelligence (6):** Reputation and breach checks via AlienVault OTX, URLScan.io, abuse.ch, ThreatCrowd, VirusTotal, and HIBP.
+*   **Internal (5):** 
+    *   **IP Resolver & Cloud Detector:** Identifies IPv4/IPv6, extracts CNAMEs, and detects cloud hosts (AWS, Azure, GCP, Cloudflare, Fastly, etc.).
+    *   **Technology Fingerprinter:** Wappalyzer-style detection across subdomains, identifying WAFs and mapping technologies to **NVD CVEs** with CVSS scores.
+    *   **Active Recon:** Directory enumeration, DNS brute-forcing, and Zone Transfers.
 
-### 🔬 Fingerprinting
-- **Technology Detection** - Wappalyzer-style detection from HTTP headers & content
-- **WAF Detection** - Identifies web application firewalls
-- **Vulnerability Mapping** - Maps technologies to known CVEs via NVD
+### Interactive Attack Surface Graph
+Visualize your target's footprint with a beautiful, force-directed **D3.js graph**. Watch in real-time as the domain node expands into subdomains, IP addresses, technologies, open ports, and discovered emails.
 
-### 📡 OSINT Collection
-- **Email Discovery** - PGP keyservers, GitHub commits, Hunter.io, crt.sh
-- **People Discovery** - Employee identification and correlation
-- **Breach Detection** - HaveIBeenPwned integration
+### Ultra-Fast Async Engine
+Built on **FastAPI** and `httpx`, the scanning engine executes dozens of concurrent reconnaissance tasks without breaking a sweat.
 
-### ⚡ Active Reconnaissance
-- **Directory Enumeration** - Async directory/file bruteforcing
-- **Zone Transfer** - DNS AXFR attempts
-- **Port Intelligence** - Shodan API integration for service discovery
-
-### 🎣 Phishing Simulation
-- **Email Campaign** - Pre-built phishing email templates
-- **Landing Pages** - Credential capture pages (Microsoft, Google, Generic)
-- **Click Tracking** - Real-time campaign monitoring with Flask server
-- **OSINT Integration** - Auto-target discovered emails
-
-### 📊 Output & Visualization
-- **Interactive Graph** - HTML visualization with vis.js
-- **HTML Reports** - Professional reconnaissance reports
-- **JSON Export** - Machine-readable results
+---
 
 ## Installation
+
+RedSurface runs natively across Windows, Linux, and macOS.
 
 ```bash
 git clone https://github.com/Skyrxin/redsurface.git
 cd redsurface
+
+# Install dependencies
 pip install -r requirements.txt
 ```
 
-## Quick Start
+## Usage
 
-### Interactive Mode (Recommended)
-```bash
-python main.py --interactive
-```
-
-The interactive wizard guides you through:
-1. **Scan Mode** - Passive, Active, Phishing, or Custom
-2. **Target Selection** - Single domain, multiple, or file input
-3. **Module Selection** - Choose specific modules (Custom mode)
-4. **API Keys** - Configure Shodan, Hunter.io, NVD, GitHub, HIBP
-5. **Output Options** - Directory, verbosity, DNS settings
-
-### Command Line
+Launch the RedSurface web interface:
 
 ```bash
-# Basic passive scan
-python main.py --target example.com
-
-# Active scan with directory enumeration
-python main.py --target example.com --mode active
-
-# With API keys for enhanced OSINT
-python main.py --target example.com --hunter-key YOUR_KEY --github-token YOUR_TOKEN
-
-# Bulk scan from file
-python main.py --input-file domains.txt --mode passive
-
-# Phishing simulation (requires SMTP config)
-python main.py --target example.com --phishing --smtp-host smtp.example.com --smtp-user user --smtp-pass pass
-
-# Skip OSINT phase
-python main.py --target example.com --skip-osint
-
-# Use system DNS resolver
-python main.py --target example.com --use-system-dns
+python main.py
 ```
 
-## Scan Modes
+*   **Web Interface:** Open `http://127.0.0.1:5000` in your browser.
+*   **API Documentation:** Interactive Swagger UI available at `http://127.0.0.1:5000/docs`.
 
-| Mode | Description |
-|------|-------------|
-| **Passive** | OSINT + DNS only (no direct target interaction) |
-| **Active** | Full scan with directory enumeration + zone transfer |
-| **Phishing** | Passive recon + phishing campaign simulation |
-| **Custom** | Select specific modules to run |
+### Working with Scans
+1.  Navigate to **New Scan** in the sidebar.
+2.  Enter your target domain (e.g., `example.com`).
+3.  Select which of the 31 plugins you wish to run.
+4.  Watch the **interactive graph** build itself in real-time as results stream in!
 
-## Output
+---
 
-Results are saved to `./output/` (configurable):
+## Configure API Keys (Optional)
 
-| File | Description |
-|------|-------------|
-| `domain_results.json` | Raw scan data |
-| `domain_graph.json` | Graph structure |
-| `domain_graph.html` | Interactive visualization |
-| `domain_report.html` | Professional HTML report |
-| `redsurface.log` | Detailed scan log |
+Many plugins (like crt.sh, RapidDNS, HackerTarget) are **100% free and require no API keys**. 
 
-## Graph Node Types
+To unlock the full power of the Threat Intel and enriched OSINT plugins, add your API keys in the **Settings** page of the web UI:
+*   **Shodan** (Port/service intelligence)
+*   **Hunter.io** (Email discovery)
+*   **NVD** (CVE vulnerability mapping limits)
+*   **GitHub** (Code/commit OSINT)
+*   **HaveIBeenPwned** (Breach detection)
+*   **SecurityTrails** (Premium subdomain enumeration)
+*   **Censys** (Asset discovery)
+*   **AbuseIPDB** (Threat intelligence)
+*   **VirusTotal** (Reputation intelligence)
 
-| Node | Shape | Color | Description |
-|------|-------|-------|-------------|
-| Domain | Diamond | Indigo | Root target domain |
-| Subdomain | Dot | Purple | Discovered subdomains |
-| IP | Dot | Green/Orange | Resolved IPs (orange = cloud) |
-| Technology | Box | Blue | Detected technologies |
-| Vulnerability | Triangle | Red | Mapped CVEs |
-| Email | Box | Gold | Discovered emails |
-| Person | Ellipse | Pink | Identified employees |
-| Port | Dot | Cyan | Open ports/services |
-| Directory | Box | Teal | Discovered directories |
+---
 
-## Project Structure
+## Project Architecture
 
-```
+```text
 redsurface/
-├── main.py                 # CLI entry point
-├── core/
-│   ├── config.py           # Scan configuration & modes
-│   ├── target.py           # Target state management
-│   ├── wizard.py           # Interactive CLI wizard
-│   ├── graph.py            # Graph data structures
-│   └── graph_engine.py     # NetworkX + PyVis builder
-├── modules/
+├── main.py                 # FastAPI Web Server Launcher
+├── app/                    # Web Application Core
+│   ├── api/                # Async REST Endpoints
+│   ├── static/             # CSS (Glassmorphism) & D3.js Graph
+│   ├── templates/          # Jinja2 HTML Views
+│   ├── database.py         # SQLite Storage Engine
+│   └── scan_engine.py      # Async Plugin Orchestration
+├── plugins/                # 31 Atomic Plugin Wrappers
+│   ├── discovery/          
+│   ├── osint/              
+│   ├── threat_intel/       
+│   └── internal/           
+├── modules/                # Core Reconnaissance Engines
 │   ├── discovery.py        # Subdomain & DNS resolution
 │   ├── fingerprint.py      # Technology & WAF detection
-│   ├── osint.py            # Email & people discovery
-│   ├── active_recon.py     # Directory enum & zone transfer
-│   ├── port_intel.py       # Shodan port intelligence
-│   └── phishing.py         # Phishing simulation
-├── utils/
-│   ├── logger.py           # Colored logging
-│   ├── output.py           # File output helpers
-│   └── report_generator.py # HTML report generation
-└── lib/                    # Frontend assets (vis.js, tom-select)
+│   └── osint.py            # Email & people discovery
+└── data/                   # SQLite Database storage
 ```
 
-## API Keys
-
-| Service | Purpose | Get Key |
-|---------|---------|---------|
-| Shodan | Port/service intelligence | [shodan.io](https://shodan.io) |
-| Hunter.io | Email discovery | [hunter.io](https://hunter.io) |
-| NVD | CVE vulnerability data | [nvd.nist.gov](https://nvd.nist.gov/developers/request-an-api-key) |
-| GitHub | Code/commit OSINT | [github.com/settings/tokens](https://github.com/settings/tokens) |
-| HIBP | Breach detection | [haveibeenpwned.com/API](https://haveibeenpwned.com/API/Key) |
-
-## Requirements
-
-- Python 3.9+
-- httpx, dnspython, networkx, pyvis, questionary, flask
+---
 
 ## Disclaimer
 
 ⚠️ **This tool is intended for authorized security testing and research only.**
 
-- Always obtain proper written authorization before scanning any target
-- The phishing module is for **authorized red team exercises only**
-- Unauthorized use may violate computer crime laws
-- The authors are not responsible for misuse of this tool
+- Always obtain proper written authorization before scanning any target.
+- Some Active Recon modules (Directory Enum, Zone Transfer) directly interact with the target. Use with caution.
+- Unauthorized use may violate computer crime laws.
+- The authors are not responsible for misuse of this tool.
 
 ## License
 
